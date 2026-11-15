@@ -429,7 +429,8 @@ define Device/ubnt_unifi-6-mesh
 	ARTIFACT/dtb := append-dtb
 	DEVICE_PACKAGES := ath11k-firmware-ipq5018 ath11k-firmware-qcn9074 \
 		kmod-ath11k-pci ipq-wifi-ubnt_unifi-6-mesh \
-		block-mount kmod-fs-ext4 resize2fs uboot-envtools
+		block-mount kmod-fs-ext4 resize2fs uboot-envtools \
+		kmod-leds-ubnt-ledbar
 endef
 TARGET_DEVICES += ubnt_unifi-6-mesh
 

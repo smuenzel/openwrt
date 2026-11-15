@@ -271,11 +271,44 @@
 		drive-strength = <8>;
 		bias-pull-up;
 	};
+
+	i2c3_pins: i2c3-state {
+		pins = "gpio33", "gpio34";
+		function = "blsp2_i2c0";
+		drive-strength = <8>;
+		bias-disable;
+	};
 };
 
 /*
- * The U6 Mesh LEDs are driven by a separate I2C MCU (UI "thunder" at 0x38,
- * optionally the Holtek HT32F52241 at 0x30), which needs the vendor driver
- * and its firmware.  There is no mainline driver, so the LEDs are left
- * unmanaged here.  The reset button above is a direct GPIO and works.
+ * The LED ring is driven by a Holtek HT32F52241 LEDBAR controller on
+ * blsp1_i2c3 (GPIO 33/34).  GPIO 31 resets the MCU, GPIO 32 is its
+ * enable/boot strap.  The vendor DT uses active-high flags for both.
  */
+&blsp1_i2c3 {
+	status = "okay";
+	pinctrl-0 = <&i2c3_pins>;
+	pinctrl-names = "default";
+	clock-frequency = <400000>;
+
+	ledbar: led-controller@30 {
+		compatible = "ubnt,ledbar";
+		reg = <0x30>;
+
+		enable-gpios = <&tlmm 32 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&tlmm 31 GPIO_ACTIVE_HIGH>;
+		led-count = <17>;
+
+		red {
+			label = "red";
+		};
+
+		green {
+			label = "green";
+		};
+
+		blue {
+			label = "blue";
+		};
+	};
+};

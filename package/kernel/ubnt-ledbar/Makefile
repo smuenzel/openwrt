@@ -16,11 +16,11 @@ include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/leds-ubnt-ledbar
   SUBMENU:=LED modules
-  TITLE:=Ubiquiti UniFi 6 LR LED support
+  TITLE:=Ubiquiti UniFi LEDBAR support
   FILES:= \
 	$(PKG_BUILD_DIR)/leds-ubnt-ledbar.ko
   AUTOLOAD:=$(call AutoProbe,leds-ubnt-ledbar,1)
-  DEPENDS:=@TARGET_mediatek_mt7622||TARGET_ramips_mt7621 +kmod-i2c-core
+  DEPENDS:=+kmod-i2c-core
 endef
 
 define KernelPackage/leds-ubnt-ledbar/description
