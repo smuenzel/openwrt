@@ -1,0 +1,281 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/*
+ * Ubiquiti UniFi U6 Mesh (board ID a651)
+ *
+ * IPQ5018 + QCN9074 (5 GHz, PCI 17cb:1104) + IPQ5018 built-in 2.4 GHz,
+ * 8 MiB SPI NOR (boot) + eMMC (kernel/rootfs), one GbE port.
+ */
+
+/dts-v1/;
+
+#include "ipq5018.dtsi"
+#include "ipq5018-ess.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	model = "Ubiquiti UniFi U6 Mesh";
+	compatible = "ubnt,unifi-6-mesh", "qcom,ipq5018";
+
+	aliases {
+		serial0 = &blsp1_uart1;
+		label-mac-device = &gmac0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+		bootargs-append = " swiotlb=1 coherent_pool=2M";
+	};
+
+	keys {
+		compatible = "gpio-keys";
+		pinctrl-0 = <&button_pins>;
+		pinctrl-names = "default";
+
+		reset {
+			label = "reset";
+			gpios = <&tlmm 24 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+	};
+};
+
+&sleep_clk {
+	clock-frequency = <32000>;
+};
+
+&xo_board_clk {
+	clock-div = <4>;
+	clock-mult = <1>;
+};
+
+&blsp1_uart1 {
+	status = "okay";
+	pinctrl-0 = <&serial_0_pins>;
+	pinctrl-names = "default";
+};
+
+&prng {
+	status = "okay";
+};
+
+&qfprom {
+	status = "okay";
+};
+
+&tsens {
+	status = "okay";
+};
+
+&blsp1_spi1 {
+	status = "okay";
+	pinctrl-0 = <&spi_pins>;
+	pinctrl-names = "default";
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "SBL1";
+				reg = <0x000000 0x030000>;
+				read-only;
+			};
+
+			partition@30000 {
+				label = "MIBIB";
+				reg = <0x030000 0x010000>;
+				read-only;
+			};
+
+			partition@40000 {
+				label = "BOOTCONFIG";
+				reg = <0x040000 0x010000>;
+				read-only;
+			};
+
+			partition@50000 {
+				label = "QSEE";
+				reg = <0x050000 0x0a0000>;
+				read-only;
+			};
+
+			partition@f0000 {
+				label = "DEVCFG";
+				reg = <0x0f0000 0x010000>;
+				read-only;
+			};
+
+			partition@100000 {
+				label = "CDT";
+				reg = <0x100000 0x010000>;
+				read-only;
+			};
+
+			partition@110000 {
+				label = "u-boot-env";
+				reg = <0x110000 0x010000>;
+			};
+
+			partition@120000 {
+				label = "u-boot";
+				reg = <0x120000 0x0a0000>;
+				read-only;
+			};
+
+			partition@1c0000 {
+				label = "ART";
+				reg = <0x1c0000 0x070000>;
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					caldata_ipq5018: calibration@1000 {
+						reg = <0x1000 0x20000>;
+					};
+
+					caldata_qcn9074: calibration@26800 {
+						reg = <0x26800 0x20000>;
+					};
+				};
+			};
+
+			partition@230000 {
+				label = "EEPROM";
+				reg = <0x230000 0x010000>;
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_0: mac@0 {
+						compatible = "mac-base";
+						reg = <0x0 0x6>;
+						#nvmem-cell-cells = <1>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&sdhc_1 {
+	status = "okay";
+	bus-width = <4>;
+
+	pinctrl-0 = <&sdc1_pins>;
+	pinctrl-names = "default";
+};
+
+&gmac0 {
+	status = "okay";
+	label = "lan";
+	nvmem-cells = <&macaddr_0 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+&mdio0 {
+	status = "okay";
+};
+
+&pcie0 {
+	status = "okay";
+	perst-gpios = <&tlmm 15 GPIO_ACTIVE_LOW>;
+
+	pcie@0 {
+		wifi@0,0 {
+			status = "okay";
+			compatible = "pci17cb,1104";
+			reg = <0x00010000 0 0 0 0>;
+			qcom,calibration-variant = "Ubiquiti-U6-Mesh";
+			qcom,ath11k-fw-memory-mode = <1>;
+
+			nvmem-cells = <&caldata_qcn9074>, <&macaddr_0 2>;
+			nvmem-cell-names = "calibration", "mac-address";
+		};
+	};
+};
+
+&pcie0_phy {
+	status = "okay";
+};
+
+&q6v5_wcss {
+	firmware-name = "ath11k/IPQ5018/hw1.0/q6_fw.mdt",
+			"ath11k/IPQ5018/hw1.0/m3_fw.mdt";
+};
+
+&wifi {
+	status = "okay";
+	qcom,rproc = <&q6v5_wcss>;
+	qcom,calibration-variant = "Ubiquiti-U6-Mesh";
+	qcom,ath11k-fw-memory-mode = <1>;
+
+	nvmem-cells = <&caldata_ipq5018>, <&macaddr_0 1>;
+	nvmem-cell-names = "calibration", "mac-address";
+};
+
+&tlmm {
+	serial_0_pins: uart0-state {
+		pins = "gpio20", "gpio21";
+		function = "blsp0_uart0";
+		drive-strength = <8>;
+		bias-disable;
+	};
+
+	spi_pins: spi-state {
+		pins = "gpio10", "gpio11", "gpio12", "gpio13";
+		function = "blsp0_spi";
+		drive-strength = <8>;
+		bias-disable;
+	};
+
+	sdc1_pins: sdc1-state {
+		clk-pins {
+			pins = "gpio9";
+			function = "sdc1_clk";
+			drive-strength = <8>;
+			bias-disable;
+		};
+
+		cmd-pins {
+			pins = "gpio8";
+			function = "sdc1_cmd";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+
+		data-pins {
+			pins = "gpio4", "gpio5", "gpio6", "gpio7";
+			function = "sdc1_data";
+			drive-strength = <8>;
+			bias-disable;
+		};
+	};
+
+	button_pins: button-state {
+		pins = "gpio24";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-pull-up;
+	};
+};
+
+/*
+ * The U6 Mesh LEDs are driven by a separate I2C MCU (UI "thunder" at 0x38,
+ * optionally the Holtek HT32F52241 at 0x30), which needs the vendor driver
+ * and its firmware.  There is no mainline driver, so the LEDs are left
+ * unmanaged here.  The reset button above is a direct GPIO and works.
+ */

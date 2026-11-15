@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/version.mk
 
 PKG_NAME:=ipq-wifi
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/firmware/qca-wireless.git
@@ -14,6 +14,13 @@ PKG_FLAGS:=nonshared
 include $(INCLUDE_DIR)/package.mk
 
 define Build/Compile
+endef
+
+# Local testing only: take board files from ./files until the
+# corresponding firmware_qca-wireless change is merged.
+define Build/Prepare
+	$(call Build/Prepare/Default)
+	$(if $(wildcard ./files/*),$(CP) ./files/* $(PKG_BUILD_DIR)/)
 endef
 
 # Use ath10k-bdencoder from https://github.com/qca/qca-swiss-army-knife.git
@@ -116,6 +123,7 @@ ALLWIFIBOARDS:= \
 	tplink_eap660hd-v1 \
 	tplink_re700x \
 	tplink_tl-wa1201-v2 \
+	ubnt_unifi-6-mesh \
 	ubnt_utr \
 	wallys_dr40x9 \
 	wallys_dr5018s \
@@ -335,6 +343,7 @@ $(eval $(call generate-ipq-wifi-package,tplink_eap650-outdoor-v1,TP-Link EAP650-
 $(eval $(call generate-ipq-wifi-package,tplink_eap660hd-v1,TP-Link EAP660 HD v1))
 $(eval $(call generate-ipq-wifi-package,tplink_re700x,TP-Link RE700X))
 $(eval $(call generate-ipq-wifi-package,tplink_tl-wa1201-v2,TP-Link TL-WA1201 V2))
+$(eval $(call generate-ipq-wifi-package,ubnt_unifi-6-mesh,Ubiquiti UniFi U6 Mesh))
 $(eval $(call generate-ipq-wifi-package,ubnt_utr,Ubiquiti UniFi Travel Router))
 $(eval $(call generate-ipq-wifi-package,wallys_dr40x9,Wallys DR40X9))
 $(eval $(call generate-ipq-wifi-package,wallys_dr5018s,Wallys DR5018S))

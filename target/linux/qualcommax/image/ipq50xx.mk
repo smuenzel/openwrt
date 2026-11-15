@@ -1,4 +1,18 @@
 DTS_DIR := $(DTS_DIR)/qcom
+
+# make_ext4fs creates a reserved-GDT layout that the kernel's online resize
+# rejects (reserve_backup_gdb: reserved block ... not at offset ...), so the
+# first boot could not grow the rootfs to the 2 GiB log partition.  mke2fs
+# reserves the backup GDT blocks correctly.  The U6 Mesh is the only ext4
+# user on this subtarget.
+define Image/mkfs/ext4
+	rm -f $@
+	echo "chown -R 0:0 $(call mkfs_target_dir,$(1))" > $@.fakeroot-script
+	echo "$(STAGING_DIR_HOST)/bin/mke2fs -q -t ext4 -b $(CONFIG_TARGET_EXT4_BLOCKSIZE) -m $(if $(CONFIG_TARGET_EXT4_RESERVED_PCT),$(CONFIG_TARGET_EXT4_RESERVED_PCT),0) $(if $(CONFIG_TARGET_EXT4_JOURNAL),,-O ^has_journal) -L rootfs -d $(call mkfs_target_dir,$(1)) $@ $(CONFIG_TARGET_ROOTFS_PARTSIZE)M" >> $@.fakeroot-script
+	chmod +x $@.fakeroot-script
+	$(FAKEROOT) "$@.fakeroot-script"
+endef
+
 DEVICE_VARS += AVM_CONTAINER_CONFIG BOOT_SCRIPT MERCUSYS_SUPPORT_STRING
 
 define Build/fit-avm
@@ -396,6 +410,28 @@ define Device/tplink_re700x
 		ipq-wifi-tplink_re700x kmod-phy-realtek
 endef
 TARGET_DEVICES += tplink_re700x
+
+define Device/ubnt_unifi-6-mesh
+	$(call Device/FitImage)
+	DEVICE_VENDOR := Ubiquiti
+	DEVICE_MODEL := UniFi U6 Mesh
+	SOC := ipq5018
+	DEVICE_DTS_CONFIG := config@a651
+	KERNEL_LOADADDR := 0x41200000
+	KERNEL_INITRAMFS := kernel-bin | fit none $$(KDIR)/image-$$(DEVICE_DTS).dtb
+	KERNEL_INSTALL := 1
+	IMAGES := sysupgrade.bin rootfs.ext4
+	FILESYSTEMS/sysupgrade.bin := ext4
+	IMAGE/sysupgrade.bin := sysupgrade-tar kernel=$$(IMAGE_KERNEL) rootfs=$$(IMAGE_ROOTFS) | append-metadata
+	FILESYSTEMS/rootfs.ext4 := ext4
+	IMAGE/rootfs.ext4 := append-rootfs
+	ARTIFACTS := dtb
+	ARTIFACT/dtb := append-dtb
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018 ath11k-firmware-qcn9074 \
+		kmod-ath11k-pci ipq-wifi-ubnt_unifi-6-mesh \
+		block-mount kmod-fs-ext4 resize2fs uboot-envtools
+endef
+TARGET_DEVICES += ubnt_unifi-6-mesh
 
 define Device/wallys_dr5018s
 	$(call Device/FitImage)

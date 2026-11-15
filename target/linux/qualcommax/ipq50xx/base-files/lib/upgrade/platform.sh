@@ -352,8 +352,29 @@ platform_do_upgrade() {
 		CI_UBIPART="rootfs"
 		nand_do_upgrade "$1"
 		;;
+	ubnt,unifi-6-mesh)
+		# OpenWrt boots from slot 1; slot 0 keeps the signed stock
+		# image, and the stock bootselect record (bs) stays at slot 0.
+		CI_KERNPART="0:HLOS_1"
+		CI_ROOTPART="log"
+		emmc_do_upgrade "$1"
+		;;
 	*)
 		default_do_upgrade "$1"
+		;;
+	esac
+}
+
+platform_copy_config() {
+	case "$(board_name)" in
+	ubnt,unifi-6-mesh)
+		[ -n "$UPGRADE_BACKUP" ] && [ -n "$EMMC_ROOT_DEV" ] || return 0
+		mkdir -p /tmp/newroot
+		if mount -t ext4 "$EMMC_ROOT_DEV" /tmp/newroot; then
+			tar -xzf "$UPGRADE_BACKUP" -C /tmp/newroot
+			sync
+			umount /tmp/newroot
+		fi
 		;;
 	esac
 }

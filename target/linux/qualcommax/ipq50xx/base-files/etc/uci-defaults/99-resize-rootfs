@@ -1,0 +1,13 @@
+#!/bin/sh
+# The sysupgrade rootfs is a small ext4 image written into the 2 GiB log
+# partition. Grow it to the partition size on the first real boot. The
+# initramfs has no root= on the command line, so it is skipped there.
+
+root=$(sed -n 's/.*root=\([^ ]*\).*/\1/p' /proc/cmdline)
+case "$root" in
+	/dev/mmcblk0p*) ;;
+	*) exit 0 ;;
+esac
+[ -b "$root" ] || exit 0
+resize2fs "$root" >/dev/null 2>&1
+exit 0
